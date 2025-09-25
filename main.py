@@ -1,12 +1,13 @@
 import sys
 import os
+
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QTextEdit, QFrame, QSplitter, QSplitterHandle,
-    QLabel, QWidget, QMenu, QListWidget, QListWidgetItem, QLineEdit, QVBoxLayout, QFormLayout, QComboBox
+    QLabel, QWidget, QMenu, QListWidget
 )
 from PyQt6.QtCore import Qt, QSize, QTimer
-from PyQt6.QtGui import QAction, QIcon, QIntValidator, QKeyEvent, QPainter, QPixmap, QColor
-from PyQt6.QtGui import QImage
+from PyQt6.QtGui import QAction, QIcon, QIntValidator, QKeyEvent, QPainter
+from PyQt6.QtWidgets import QListWidgetItem, QLineEdit, QVBoxLayout, QComboBox, QFormLayout
 
 assetspath = 'assets'
 
@@ -21,24 +22,21 @@ photoimgassetpath = os.path.join(assetspath, "IMAGE.png")
 
 ICONSIZE = 64
 
-def invert_icon(path):
-    pixmap = QPixmap(path)
-    image = pixmap.toImage()
-    image.invertPixels()
-    return QIcon(QPixmap.fromImage(image))
-
 class Viewport(QFrame):
     def __init__(self):
         super().__init__()
-        self.setStyleSheet("background-color: #121212;")
-        self.objects = []
+        self.setStyleSheet("background-color: black;")
+        self.objects = []  # store drawable objects
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Example: draw objects
         for obj in self.objects:
             painter.setBrush(obj['color'])
             painter.drawRect(obj['x'], obj['y'], obj['w'], obj['h'])
+
         painter.end()
 
 class CustomSplitterHandle(QSplitterHandle):
@@ -69,52 +67,6 @@ class GameEditor(QMainWindow):
         version = 0
         self.setWindowTitle(f"Engine - v{version}")
 
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: rgb(36,36,36);
-                color: #f0f0f0;
-            }
-            QMenuBar {
-                background-color: black;
-                color: #f0f0f0;
-            }
-            QMenuBar::item {
-                background-color: black;
-                color: #f0f0f0;
-            }
-            QMenuBar::item:selected {
-                background-color: #333333;
-            }
-            QMenu {
-                background-color: rgb(36,36,36);
-                color: #f0f0f0;
-            }
-            QMenu::separator {
-                background-color: black;
-                height: 1px;
-                margin: 3px 0;
-            }
-            QListWidget {
-                background-color: rgb(36,36,36);
-                color: #f0f0f0;
-                border: 1px solid black;
-            }
-            QLineEdit {
-                background-color: rgb(36,36,36);
-                color: #f0f0f0;
-                border: 1px solid black;
-            }
-            QLabel {
-                color: #f0f0f0;
-            }
-            QFrame {
-                background-color: rgb(36,36,36);
-            }
-            QSplitter::handle {
-                background-color: black;
-            }
-        """)
-
         self.undo_stack = []
         self.redo_stack = []
         self.undo_timer = QTimer()
@@ -122,32 +74,37 @@ class GameEditor(QMainWindow):
         self.redo_timer = QTimer()
         self.redo_timer.timeout.connect(self.redo)
 
-        self.undo_delay = 500
+        self.undo_delay = 500  # ms between repeats when holding
 
+        # Menu bar
         menu = self.menuBar()
         opsettingsbutton = QAction("&Open Project Settings", self)
         opsettingsbutton.triggered.connect(self.openprojectsettings)
         editmenu = menu.addMenu("&Settings")
         editmenu.addAction(opsettingsbutton)
         editmenu.addSeparator()
+
         filemenu = menu.addMenu("&File")
 
+        # Left panel
         self.left = QWidget()
         self.leftlayout = QFormLayout()
         self.left.setLayout(self.leftlayout)
-        self.left.setStyleSheet("background-color: #1e1e1e; border: 1px solid #444;")
+        self.left.setStyleSheet("background-color: white; border: 1px solid black;")
 
+        # Right panel
         self.right = QWidget()
         self.rightlayout = QFormLayout()
         self.right.setLayout(self.rightlayout)
-        self.right.setStyleSheet("background-color: #1e1e1e; border: 1px solid #444;")
+        self.right.setStyleSheet("background-color: white; border: 1px solid black;")
 
         self.left.setMinimumWidth(200)
         self.right.setMinimumWidth(200)
 
         viewport = Viewport()
-        viewport.setStyleSheet("border: 1px solid #444;")
+        viewport.setStyleSheet("border: 1px solid black;")
 
+        # Property fields
         self.prop_name = QLineEdit()
         self.prop_type = QLineEdit()        
         self.prop_type.setReadOnly(True)
@@ -177,6 +134,7 @@ class GameEditor(QMainWindow):
         self.rightlayout.addRow("File Location:", self.prop_fileloc)
         self.prop_fileloc.hide()
         self.prop_fileloc.editingFinished.connect(self.updatefilelocation)
+
         self.prop_name.editingFinished.connect(self.renamecurrentitem)
 
         hsplit = CustomSplitter(Qt.Orientation.Horizontal, reset_sizes=[150, 500, 200])
@@ -186,7 +144,7 @@ class GameEditor(QMainWindow):
         hsplit.setSizes(hsplit.reset_sizes_list)
 
         self.bottom = QListWidget()
-        self.bottom.setStyleSheet("border: 1px solid #444;")
+        self.bottom.setStyleSheet("border: 1px solid black;")
         self.bottom.setMinimumHeight(120)
         self.bottom.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.bottom.customContextMenuRequested.connect(self.showassetscontextmenu)
@@ -196,23 +154,27 @@ class GameEditor(QMainWindow):
         self.bottom.setGridSize(QSize(100, 100))
         self.bottom.setMovement(QListWidget.Movement.Static)
         self.bottom.setSpacing(10)
+
         self.bottom.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.bottom.setEditTriggers(QListWidget.EditTrigger.NoEditTriggers)
 
         self.statuslabel = QLabel(self)
-        self.statuslabel.setStyleSheet("color: grey; font-size: 12px;")
+        self.statuslabel.setStyleSheet("color: gray; font-size: 12px;")
         self.statuslabel.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        self.statuslabel.setFixedHeight(20)
+        self.statuslabel.setFixedHeight(20)  # small text
 
         self.updatestatuslabel()
+
         self.bottom.itemSelectionChanged.connect(self.updatestatuslabel)
 
         bottomcontainer = QWidget()
         bottomlayout = QVBoxLayout()
         bottomlayout.setContentsMargins(0,0,0,0)
         bottomlayout.setSpacing(0)
-        bottomlayout.addWidget(self.bottom)
-        bottomlayout.addWidget(self.statuslabel)
+
+        bottomlayout.addWidget(self.bottom)  # assets panel
+        bottomlayout.addWidget(self.statuslabel)  # status text
+
         bottomcontainer.setLayout(bottomlayout)
 
         vsplit = CustomSplitter(Qt.Orientation.Vertical, reset_sizes=[500, 320])
@@ -221,46 +183,17 @@ class GameEditor(QMainWindow):
         vsplit.setSizes(vsplit.reset_sizes_list)
 
         self.setCentralWidget(vsplit)
+
         self.bottom.installEventFilter(self)
+
+        self.bottom.itemSelectionChanged.connect(self.updatestatuslabel)
         self.bottom.itemSelectionChanged.connect(self.updatepropertiespanel)
         self.bottom.itemChanged.connect(self.updatepropertiespanel)
 
         self.createasset("Folder", "Assets")
         self.undo_stack = []
+
         self.updatepropertiespanel()
-
-    def createasset(self, assettype, assetname):
-        items = []
-        if assettype == 'Folder':
-            item = QListWidgetItem(invert_icon(folderimgassetpath), assetname)
-            item.setData(Qt.ItemDataRole.UserRole, "Folder")
-            items.append(item)
-        elif assettype == 'Script':
-            item = QListWidgetItem(invert_icon(scriptimgassetpath), assetname)
-            item.setData(Qt.ItemDataRole.UserRole, "Script")
-            items.append(item)
-        elif assettype == 'Material':
-            item = QListWidgetItem(invert_icon(matimgassetpath), assetname)
-            item.setData(Qt.ItemDataRole.UserRole, "Material")
-            items.append(item)
-        elif assettype == 'Audio':
-            item = QListWidgetItem(invert_icon(audioimgassetpath), assetname)
-            item.setData(Qt.ItemDataRole.UserRole, "Audio")
-            item.setData(Qt.ItemDataRole.UserRole + 1, "")
-            items.append(item)
-        elif assettype == 'Image':
-            item = QListWidgetItem(invert_icon(photoimgassetpath), assetname)
-            item.setData(Qt.ItemDataRole.UserRole, "Image")
-            item.setData(Qt.ItemDataRole.UserRole + 1, "")
-            items.append(item)
-
-        for item in items:
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-            self.bottom.addItem(item)
-
-        self.undo_stack.append(("add", items))
-        self.redo_stack.clear()
-        self.updatestatuslabel()
 
     def updatestatuslabel(self):
         selectedcount = len(self.bottom.selectedItems())
@@ -468,6 +401,44 @@ class GameEditor(QMainWindow):
         item = selected[0]
         item.setText(self.prop_name.text())
         self.updatepropertiespanel()
+
+    def createasset(self, assettype, assetname):
+        items = []
+        if assettype == 'Folder':
+            foldericon = QIcon(str(folderimgassetpath))
+            item = QListWidgetItem(foldericon, assetname)
+            item.setData(Qt.ItemDataRole.UserRole, "Folder")
+            items.append(item)
+        elif assettype == 'Script':
+            scripticon = QIcon(str(scriptimgassetpath))
+            item = QListWidgetItem(scripticon, assetname)
+            item.setData(Qt.ItemDataRole.UserRole, "Script")
+            items.append(item)
+        elif assettype == 'Material':
+            maticon = QIcon(str(matimgassetpath))
+            item = QListWidgetItem(maticon, assetname)
+            item.setData(Qt.ItemDataRole.UserRole, "Material")
+            items.append(item)
+        elif assettype == 'Audio':
+            audicon = QIcon(str(audioimgassetpath))
+            item = QListWidgetItem(audicon, assetname)
+            item.setData(Qt.ItemDataRole.UserRole, "Audio")
+            item.setData(Qt.ItemDataRole.UserRole + 1, "")
+            items.append(item)
+        elif assettype == 'Image':
+            photoicon = QIcon(str(photoimgassetpath))
+            item = QListWidgetItem(photoicon, assetname)
+            item.setData(Qt.ItemDataRole.UserRole, "Image")
+            item.setData(Qt.ItemDataRole.UserRole + 1, "")
+            items.append(item)
+
+        for item in items:
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+            self.bottom.addItem(item)
+
+        self.undo_stack.append(("add", items))
+        self.redo_stack.clear()
+        self.updatestatuslabel()
 
     def deleteitem(self, items):
         if not isinstance(items, list):
