@@ -1,0 +1,17 @@
+Add Rename to Undo
+
+Material Creation
+
+Side Panels (Hierarchy, Inspector, Console)
+
+Script Integration and Editing
+
+Actually Executing/Previewing in the Viewport
+
+Drag-and-Drop to Rearrange Assets
+
+Asset Search/Filter Bar
+
+Multi-Selection Operations (Copy, Delete, Move)
+
+Asset Thumbnail Previews (dynamic icons for materials/scripts)
